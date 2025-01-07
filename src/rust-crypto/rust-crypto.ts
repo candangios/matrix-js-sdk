@@ -71,7 +71,7 @@ import {
 import { deviceKeysToDeviceMap, rustDeviceToJsDevice } from "./device-converter.ts";
 import { IDownloadKeyResult, IQueryKeysRequest } from "../client.ts";
 import { Device, DeviceMap } from "../models/device.ts";
-import { SECRET_STORAGE_ALGORITHM_V1_AES, SecretStorageKey, ServerSideSecretStorage } from "../secret-storage.ts";
+import { SECRET_STORAGE_ALGORITHM_V1_AES, ServerSideSecretStorage } from "../secret-storage.ts";
 import { CrossSigningIdentity } from "./CrossSigningIdentity.ts";
 import { secretStorageCanAccessSecrets, secretStorageContainsCrossSigningKeys } from "./secret-storage.ts";
 import { isVerificationEvent, RustVerificationRequest, verificationMethodIdentifierToMethod } from "./verification.ts";
@@ -770,7 +770,7 @@ export class RustCrypto extends TypedEventEmitter<RustCryptoEvents, CryptoEventH
      */
     public async isSecretStorageReady(): Promise<boolean> {
         // make sure that the cross-signing keys are stored
-        const secretsToCheck: SecretStorageKey[] = [
+        const secretsToCheck = [
             "m.cross_signing.master",
             "m.cross_signing.user_signing",
             "m.cross_signing.self_signing",
@@ -843,40 +843,9 @@ export class RustCrypto extends TypedEventEmitter<RustCryptoEvents, CryptoEventH
             await this.secretStorage.store("m.cross_signing.self_signing", crossSigningPrivateKeys.self_signing_key);
         }
 
-        // likewise with the key backup key: if we have one, store it in secret storage (if it's not already there)
-        // also don't bother storing it if we're about to set up a new backup
-        if (!setupNewKeyBackup) {
-            await this.saveBackupKeyToStorage();
-        } else {
+        if (setupNewKeyBackup) {
             await this.resetKeyBackup();
         }
-    }
-
-    /**
-     * If we have a backup key for the current, trusted backup in cache,
-     * save it to secret storage.
-     */
-    private async saveBackupKeyToStorage(): Promise<void> {
-        const keyBackupInfo = await this.backupManager.getServerBackupInfo();
-        if (!keyBackupInfo || !keyBackupInfo.version) {
-            logger.info("Not saving backup key to secret storage: no backup info");
-            return;
-        }
-
-        const backupKeys: RustSdkCryptoJs.BackupKeys = await this.olmMachine.getBackupKeys();
-        if (!backupKeys.decryptionKey) {
-            logger.info("Not saving backup key to secret storage: no backup key");
-            return;
-        }
-
-        if (!decryptionKeyMatchesKeyBackupInfo(backupKeys.decryptionKey, keyBackupInfo)) {
-            logger.info("Not saving backup key to secret storage: decryption key does not match backup info");
-            return;
-        }
-
-        const backupKeyBase64 = backupKeys.decryptionKey.toBase64();
-
-        await this.secretStorage.store("m.megolm_backup.v1", backupKeyBase64);
     }
 
     /**
