@@ -24,7 +24,6 @@ interface BaseTimelineEvent {
         user_ids?: string[];
         room?: boolean;
     };
-    "metadata"?: any;
 }
 
 interface ReplyEvent {
@@ -72,7 +71,7 @@ export interface RelationEvent {
  * @see https://spec.matrix.org/v1.9/client-server-api/#mroommessage
  */
 export interface RoomMessageTextEventContent extends BaseTimelineEvent {
-    msgtype: MsgType.Text | MsgType.Emote | MsgType.Notice | MsgType.None;
+    msgtype: MsgType.Text | MsgType.Emote | MsgType.Notice;
     format?: "org.matrix.custom.html";
     formatted_body?: string;
 }
